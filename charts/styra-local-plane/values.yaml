@@ -1,0 +1,39 @@
+tenant: ""
+system: ""
+systemId: ""
+bearerToken: ""
+
+namespace: opa-system
+service:
+  type: ClusterIP
+  port: 8080
+
+replicaCount: 1
+
+image:
+  repository: styra/styra-local-plane
+  pullPolicy: Always
+  tag: ""
+
+imagePullSecrets: []
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+
+securityContext: {}
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

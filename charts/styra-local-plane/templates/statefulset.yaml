@@ -1,0 +1,74 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: {{ include "styra-local-plane.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "styra-local-plane.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ include "styra-local-plane.fullname" . }}-svc
+  selector:
+    matchLabels:
+      {{- include "styra-local-plane.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        sidecar.istio.io/inject: "false"
+        {{- include "styra-local-plane.selectorLabels" . | nindent 6 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: slp
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        args:
+          - "--config-file=/config/slp.yaml"
+          - "--addr=0.0.0.0:8080"
+        livenessProbe:
+          httpGet:
+            path: /v1/system/alive
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/system/ready
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        volumeMounts:
+        - name: {{ include "styra-local-plane.fullname" . }}-config-vol
+          readOnly: true
+          mountPath: /config/slp.yaml
+          subPath: slp.yaml
+        - name: {{ include "styra-local-plane.fullname" . }}-scratch-vol
+          mountPath: /scratch
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: {{ include "styra-local-plane.fullname" . }}-config-vol
+        secret:
+          secretName: {{ include "styra-local-plane.fullname" . }}-styra-credentials
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ include "styra-local-plane.fullname" . }}-scratch-vol
+      labels:
+        slp-pvc: {{ include "styra-local-plane.fullname" . }}-app-pvc
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi
